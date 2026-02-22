@@ -3,7 +3,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 export default function handler(req: VercelRequest, res: VercelResponse) {
   res.json({
     status: 'ok',
-    service: 'openclaw-mentra-bridge',
+    service: 'mentraclaw',
     timestamp: new Date().toISOString(),
     environment: {
       nodeVersion: process.version,
