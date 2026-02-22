@@ -3,15 +3,5 @@
     "api/**/*.ts": {
       "runtime": "@vercel/node"
     }
-  },
-  "env": {
-    "OPENCLAW_TOKEN": "@openclaw-token",
-    "OPENCLAW_URL": "@openclaw-url"
-  },
-  "build": {
-    "env": {
-      "OPENCLAW_TOKEN": "@openclaw-token",
-      "OPENCLAW_URL": "@openclaw-url"
-    }
   }
 }
