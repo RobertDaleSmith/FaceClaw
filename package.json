@@ -1,0 +1,23 @@
+{
+  "name": "openclaw-mentra-bridge",
+  "version": "1.0.0",
+  "description": "Bridge MentraOS Smart Glasses to OpenClaw AI",
+  "main": "api/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step needed for Vercel functions'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@mentra/sdk": "^2.1.30"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@vercel/node": "^3.0.15",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
