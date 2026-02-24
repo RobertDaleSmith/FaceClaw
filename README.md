@@ -1,185 +1,113 @@
-# MentraOS OpenClaw Plugin
+<p align="center">
+  <img src="logo.jpg" alt="FaceClaw" width="200" />
+</p>
 
-Bidirectional communication channel plugin for MentraOS smart glasses integration with OpenClaw.
+<h1 align="center">FaceClaw</h1>
+
+<p align="center">
+  Bridge MentraOS Smart Glasses to OpenClaw AI
+</p>
+
+---
+
+An [OpenClaw](https://github.com/openclaw/openclaw) channel plugin that connects [MentraOS](https://mentra.glass) smart glasses to OpenClaw agents via the `@mentra/sdk` AppServer. Talk to your AI through your glasses.
 
 ## Features
 
-- **Bidirectional Communication**: Receive voice transcriptions and photos from MentraOS, send responses back via TTS
-- **Webhook Server**: Built-in webhook server to receive MentraOS events
-- **Voice Transcriptions**: Process voice input from smart glasses users
-- **Photo Processing**: Handle photos captured with smart glasses camera
-- **TTS Responses**: Send text responses back to glasses as speech
-- **Session Management**: Handle user sessions and conversation state
+- **Voice interaction** — "Hey Mentra" wake word with 30s conversational follow-up window
+- **Echo suppression** — prevents TTS feedback loops
+- **Stop command** — say "stop" to interrupt TTS at any time
+- **Photo capture** — snap a photo from your glasses and send it to the agent
+- **Full OpenClaw channel** — config, status, routing, session management
 
-## Configuration
+## Architecture
 
-Add the MentraOS channel configuration to your OpenClaw config:
+```
+Glasses → MentraOS → ngrok → AppServer (port 3335) → OpenClaw Agent → TTS → Glasses
+```
+
+The plugin runs an `@mentra/sdk` AppServer inside OpenClaw as a channel extension. No external bridge or serverless deployment needed.
+
+## Setup
+
+### 1. Install the plugin
+
+Copy this repo into your OpenClaw extensions directory:
+
+```bash
+cp -r . ~/.openclaw/extensions/mentraos-plugin
+cd ~/.openclaw/extensions/mentraos-plugin
+npm install
+npm run build
+```
+
+### 2. Configure OpenClaw
+
+Add to your `openclaw.json`:
 
 ```json
 {
   "channels": {
     "mentraos": {
       "enabled": true,
-      "apiKey": "your-mentraos-api-key-here",
-      "apiUrl": "https://api.mentra.glass",
-      "webhookPort": 3978
+      "apiKey": "your-mentraos-api-key",
+      "webhookPort": 3335
     }
   }
 }
 ```
 
-### Configuration Options
+### 3. Expose the AppServer
 
-- `enabled` (boolean): Enable/disable the MentraOS channel
-- `apiKey` (string): Your MentraOS API key for sending TTS responses
-- `apiUrl` (string): MentraOS API base URL (default: https://api.mentra.glass)
-- `webhookPort` (number): Port for webhook server (default: 3978, range: 1024-65535)
-
-## Setup Instructions
-
-### 1. Install and Configure
-
-The plugin is already installed in your OpenClaw extensions directory. Update your OpenClaw configuration with the MentraOS settings above.
-
-### 2. Obtain MentraOS API Key
-
-1. Go to [console.mentra.glass](https://console.mentra.glass/)
-2. Create or select your MentraOS app
-3. Copy your API key to the configuration
-
-### 3. Set Up Public Webhook URL
-
-Since MentraOS needs to send webhooks to your OpenClaw instance, you need a public URL:
-
-**Using ngrok (recommended for testing):**
-```bash
-ngrok http 3978
-```
-This will give you a URL like `https://abc123.ngrok.io`
-
-**Using Tailscale Funnel:**
-```bash
-tailscale funnel 3978
-```
-
-### 4. Configure MentraOS App
-
-In the MentraOS developer console:
-1. Set your app's webhook URL to: `https://your-public-url/webhook`
-2. Enable microphone permissions for voice transcriptions
-3. Enable camera permissions for photo capture (optional)
-
-### 5. Test the Integration
-
-1. Start OpenClaw: `openclaw gateway start`
-2. Check channel status: `openclaw status`
-3. The MentraOS channel should show as "OK" if properly configured
-4. Look for webhook server startup logs
-
-## How It Works
-
-### Inbound: MentraOS → OpenClaw
-1. User speaks to smart glasses
-2. MentraOS transcribes speech and sends webhook to `/webhook`
-3. Plugin receives webhook, routes transcription to OpenClaw agent
-4. Agent processes the message and generates response
-
-### Outbound: OpenClaw → MentraOS  
-1. OpenClaw agent generates response text
-2. Plugin sends response to MentraOS API
-3. MentraOS converts text to speech and plays on glasses
-4. User hears the response
-
-### Photo Processing
-1. User takes photo with smart glasses camera
-2. MentraOS sends photo data via webhook
-3. Plugin routes photo to OpenClaw agent for analysis
-4. Agent analyzes photo and generates description/response
-5. Response is sent back as speech
-
-## Webhook Endpoints
-
-The plugin exposes these endpoints:
-
-- `POST /webhook` - Main webhook endpoint for MentraOS events
-- `GET /health` - Health check endpoint
-
-## Supported Event Types
-
-- `transcription` - Voice transcriptions from smart glasses microphone
-- `photo` - Photos captured with smart glasses camera  
-- `session_start` - User session initialization
-- `session_end` - User session termination
-
-## Troubleshooting
-
-### Channel Shows "SETUP - not configured"
-- Verify `apiKey` is set in your config
-- Ensure `enabled: true` is set
-- Restart OpenClaw after config changes
-
-### Webhook Server Not Starting
-- Check if port is already in use: `lsof -i :3978`
-- Try a different `webhookPort` in config
-- Check OpenClaw logs for error messages
-
-### MentraOS Not Receiving Responses
-- Verify your MentraOS API key is correct
-- Check that `apiUrl` matches your MentraOS instance
-- Look for API errors in OpenClaw logs
-
-### No Webhooks Received
-- Verify ngrok/tunnel is running and accessible
-- Check MentraOS console webhook URL configuration
-- Test webhook endpoint: `curl https://your-url/health`
-
-## Development
-
-### Building from Source
+The AppServer needs to be reachable from MentraOS cloud. Use ngrok or similar:
 
 ```bash
-cd /path/to/mentraos-plugin
-npm install
-npm run build
+ngrok http 3335
 ```
 
-### Plugin Structure
+### 4. Configure MentraOS
 
-- `src/channel.ts` - Main channel plugin implementation
-- `src/webhook.ts` - Webhook server and MentraOS API client
-- `src/runtime.ts` - OpenClaw runtime interface
-- `src/lifecycle.ts` - Plugin lifecycle management
-- `index.ts` - Plugin entry point and registration
+In the [MentraOS developer console](https://console.mentra.glass/):
+- Set your app's webhook URL to your ngrok URL
+- Package name: `com.openclaw.faceclaw`
 
-## API Reference
+### 5. Start OpenClaw
 
-### Webhook Payload Format
-
-```typescript
-interface MentraWebhookPayload {
-  type: 'transcription' | 'photo' | 'session_start' | 'session_end';
-  userId: string;
-  sessionId: string;
-  data?: {
-    text?: string;           // Transcription text
-    isFinal?: boolean;       // Whether transcription is final
-    imageBuffer?: string;    // Base64 encoded image
-    mimeType?: string;       // Image MIME type
-  };
-}
+```bash
+openclaw gateway start
 ```
 
-### MentraOS API Response Format
+Check status with `openclaw status` — MentraOS channel should show as OK.
 
-```typescript
-// TTS Request to MentraOS API
-{
-  userId: string;
-  text: string;
-  voice: string;
-}
+## Usage
+
+1. Put on your MentraOS glasses
+2. Say **"Hey Mentra"** followed by your message
+3. The agent responds via TTS through the glasses
+4. Follow-up conversation is active for 30 seconds (no wake word needed)
+5. Say **"stop"** to interrupt at any time
+
+## Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `enabled` | `false` | Enable/disable the channel |
+| `apiKey` | — | MentraOS API key (required) |
+| `apiUrl` | `https://api.mentra.glass` | MentraOS API base URL |
+| `webhookPort` | `3335` | AppServer port |
+
+## Plugin Structure
+
+```
+├── index.ts                 # Plugin entry point
+├── src/
+│   ├── channel.ts           # Channel plugin (config, status, gateway, outbound)
+│   └── runtime.ts           # OpenClaw runtime interface
+├── openclaw.plugin.json     # Plugin manifest
+├── package.json
+└── tsconfig.json
 ```
 
 ## License
 
-MIT - See LICENSE file for details
+MIT
